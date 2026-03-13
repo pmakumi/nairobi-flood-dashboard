@@ -4,3 +4,5 @@ numpy
 requests
 folium
 streamlit_folium
+requests.adapters
+urllib3.util.retry
