@@ -1,0 +1,9 @@
+streamlit
+pandas
+numpy
+requests
+json
+folium
+streamlit_folium
+requests.adapters
+urllib3.util.retry
