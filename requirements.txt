@@ -2,7 +2,6 @@ streamlit
 pandas
 numpy
 requests
-json
 folium
 streamlit_folium
 requests.adapters
