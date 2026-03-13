@@ -216,155 +216,157 @@ with col1:
 with col2:
     st.metric("Longitude", f"{lon:.6f}")
 #---------------
-
-url = "https://api.open-meteo.com/v1/forecast"
-params = {
-    "latitude": lat,
-    "longitude": lon,
-
-    # Hourly data
-    "hourly": (
-        "temperature_2m,"
-        "relative_humidity_2m,"
-        "precipitation,"
-        "rain,"
-        "windspeed_10m,"
-        "cloudcover,"
-        "weathercode"
-    ),
-
-    # Daily summaries
-    "daily": (
-        "weathercode,"
-        "temperature_2m_max,"
-        "temperature_2m_min,"
+@st.cache_data(ttl=3600)
+def forecast():
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+    
+        # Hourly data
+        "hourly": (
+            "temperature_2m,"
+            "relative_humidity_2m,"
+            "precipitation,"
+            "rain,"
+            "windspeed_10m,"
+            "cloudcover,"
+            "weathercode"
+        ),
+    
+        # Daily summaries
+        "daily": (
+            "weathercode,"
+            "temperature_2m_max,"
+            "temperature_2m_min,"
+            "precipitation_sum"
+        ),
+    
+        # Next 7 days
+        "forecast_days": 7,
+    
+        # Local timezone
+        "timezone": "Africa/Nairobi"
+    }
+    
+    response = session.get(url, params=params,verify = False)
+    response.raise_for_status()
+    data = response.json()
+    
+    daily_df = pd.DataFrame(data["daily"])
+    daily_df["time"] = pd.to_datetime(daily_df["time"])
+    
+    #daily_df
+    
+    WEATHER_CODE_MAP = {
+        0: "Clear sky",
+    
+        1: "Mainly clear",
+        2: "Partly cloudy",
+        3: "Overcast",
+    
+        45: "Fog",
+        48: "Depositing rime fog",
+    
+        51: "Light drizzle",
+        53: "Moderate drizzle",
+        55: "Dense drizzle",
+    
+        56: "Light freezing drizzle",
+        57: "Dense freezing drizzle",
+    
+        61: "Slight rain",
+        63: "Moderate rain",
+        65: "Heavy rain",
+    
+        66: "Light freezing rain",
+        67: "Heavy freezing rain",
+    
+        71: "Slight snow fall",
+        73: "Moderate snow fall",
+        75: "Heavy snow fall",
+    
+        77: "Snow grains",
+    
+        80: "Slight rain showers",
+        81: "Moderate rain showers",
+        82: "Violent rain showers",
+    
+        85: "Slight snow showers",
+        86: "Heavy snow showers",
+    
+        95: "Thunderstorm",
+        96: "Thunderstorm with slight hail",
+        99: "Thunderstorm with heavy hail"
+    }
+    
+    WEATHER_CODE_EMOJI = {
+        0:  "☀️ Clear sky",
+    
+        1:  "🌤️ Mainly clear",
+        2:  "⛅ Partly cloudy",
+        3:  "☁️ Overcast",
+    
+        45: "🌫️ Fog",
+        48: "🌫️ Rime fog",
+    
+        51: "🌦️ Light drizzle",
+        53: "🌦️ Moderate drizzle",
+        55: "🌧️ Dense drizzle",
+    
+        56: "🧊🌦️ Freezing drizzle",
+        57: "🧊🌧️ Dense freezing drizzle",
+    
+        61: "🌧️ Light rain",
+        63: "🌧️ Moderate rain",
+        65: "🌧️ Heavy rain",
+    
+        66: "🧊🌧️ Freezing rain",
+        67: "🧊🌧️ Heavy freezing rain",
+    
+        71: "🌨️ Light snow",
+        73: "🌨️ Moderate snow",
+        75: "❄️ Heavy snow",
+    
+        77: "❄️ Snow grains",
+    
+        80: "🌦️ Rain showers",
+        81: "🌧️ Heavy rain showers",
+        82: "⛈️ Violent rain showers",
+    
+        85: "🌨️ Snow showers",
+        86: "❄️ Heavy snow showers",
+    
+        95: "⛈️ Thunderstorm",
+        96: "⛈️ Thunderstorm + hail",
+        99: "⛈️ Severe thunderstorm + hail"
+    }
+    
+    daily_df["weather_description"] = (
+        daily_df["weathercode"]
+        .map(WEATHER_CODE_MAP)
+        .fillna("Unknown")
+    )
+    
+    daily_df["weather_emoji"] = (
+        daily_df["weathercode"]
+        .map(WEATHER_CODE_EMOJI)
+        .fillna("🌡️ Unknown")
+    )
+    
+    wf= daily_df[[
+        "time",
+        #"weather_description",
+        "weather_emoji",
+        "temperature_2m_min",
+        "temperature_2m_max",
         "precipitation_sum"
-    ),
+    ]]
+    wf= wf.rename(columns = {"time":"Id_date","weather_emoji":"Description","temperature_2m_min":"Min_Temp","temperature_2m_max":"Max_Temp","precipitation_sum":"Precipitation"}
+             )
+    
+    return wf
 
-    # Next 7 days
-    "forecast_days": 7,
-
-    # Local timezone
-    "timezone": "Africa/Nairobi"
-}
-
-response = session.get(url, params=params,verify = False)
-response.raise_for_status()
-data = response.json()
-
-daily_df = pd.DataFrame(data["daily"])
-daily_df["time"] = pd.to_datetime(daily_df["time"])
-
-#daily_df
-
-WEATHER_CODE_MAP = {
-    0: "Clear sky",
-
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-
-    45: "Fog",
-    48: "Depositing rime fog",
-
-    51: "Light drizzle",
-    53: "Moderate drizzle",
-    55: "Dense drizzle",
-
-    56: "Light freezing drizzle",
-    57: "Dense freezing drizzle",
-
-    61: "Slight rain",
-    63: "Moderate rain",
-    65: "Heavy rain",
-
-    66: "Light freezing rain",
-    67: "Heavy freezing rain",
-
-    71: "Slight snow fall",
-    73: "Moderate snow fall",
-    75: "Heavy snow fall",
-
-    77: "Snow grains",
-
-    80: "Slight rain showers",
-    81: "Moderate rain showers",
-    82: "Violent rain showers",
-
-    85: "Slight snow showers",
-    86: "Heavy snow showers",
-
-    95: "Thunderstorm",
-    96: "Thunderstorm with slight hail",
-    99: "Thunderstorm with heavy hail"
-}
-
-WEATHER_CODE_EMOJI = {
-    0:  "☀️ Clear sky",
-
-    1:  "🌤️ Mainly clear",
-    2:  "⛅ Partly cloudy",
-    3:  "☁️ Overcast",
-
-    45: "🌫️ Fog",
-    48: "🌫️ Rime fog",
-
-    51: "🌦️ Light drizzle",
-    53: "🌦️ Moderate drizzle",
-    55: "🌧️ Dense drizzle",
-
-    56: "🧊🌦️ Freezing drizzle",
-    57: "🧊🌧️ Dense freezing drizzle",
-
-    61: "🌧️ Light rain",
-    63: "🌧️ Moderate rain",
-    65: "🌧️ Heavy rain",
-
-    66: "🧊🌧️ Freezing rain",
-    67: "🧊🌧️ Heavy freezing rain",
-
-    71: "🌨️ Light snow",
-    73: "🌨️ Moderate snow",
-    75: "❄️ Heavy snow",
-
-    77: "❄️ Snow grains",
-
-    80: "🌦️ Rain showers",
-    81: "🌧️ Heavy rain showers",
-    82: "⛈️ Violent rain showers",
-
-    85: "🌨️ Snow showers",
-    86: "❄️ Heavy snow showers",
-
-    95: "⛈️ Thunderstorm",
-    96: "⛈️ Thunderstorm + hail",
-    99: "⛈️ Severe thunderstorm + hail"
-}
-
-daily_df["weather_description"] = (
-    daily_df["weathercode"]
-    .map(WEATHER_CODE_MAP)
-    .fillna("Unknown")
-)
-
-daily_df["weather_emoji"] = (
-    daily_df["weathercode"]
-    .map(WEATHER_CODE_EMOJI)
-    .fillna("🌡️ Unknown")
-)
-
-wf= daily_df[[
-    "time",
-    #"weather_description",
-    "weather_emoji",
-    "temperature_2m_min",
-    "temperature_2m_max",
-    "precipitation_sum"
-]]
-wf= wf.rename(columns = {"time":"Id_date","weather_emoji":"Description","temperature_2m_min":"Min_Temp","temperature_2m_max":"Max_Temp","precipitation_sum":"Precipitation"}
-         )
-
-wf
-
-
+data= forecast()
+data
 #,"weather_description":"Description"
