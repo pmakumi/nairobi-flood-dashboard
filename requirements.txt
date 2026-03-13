@@ -3,5 +3,6 @@ pandas
 numpy
 requests
 folium
-requests.adapters
-urllib3.util.retry
+st_folium
+HTTPAdapter
+Retry
